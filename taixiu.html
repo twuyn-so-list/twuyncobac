@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Game Simulator — Xỉu/Tài </title>
+  <meta name="description" content="Trang Cá Cược Tài Xỉu - TWUYNSOLIST"> 
+  <!-- Tech / notes:
+       - Pure HTML/CSS/Vanilla JS (no external libs)
+       - Responsive, accessible, modern UI, animated dice
+       - For demo/education only — no gambling features -->
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#9aa6b2;
+      --accent1:#7c5cff;
+      --accent2:#00d4ff;
+      --glass: rgba(255,255,255,0.04);
+      --success:#22c55e;
+      --danger:#ff5c7c;
+      --glass-border: rgba(255,255,255,0.06);
+      --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
+      font-synthesis: none;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:
+        radial-gradient(1200px 400px at 10% 10%, rgba(124,92,255,0.12), transparent 8%),
+        radial-gradient(900px 300px at 90% 90%, rgba(0,212,255,0.06), transparent 8%),
+        var(--bg);
+      color:#e6eef6;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:20px;
+      min-height:100vh;
+    }
+
+    .container{
+      width:100%;
+      max-width:1100px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:22px;
+      align-items:start;
+    }
+
+    /* Left sidebar (controls + history) */
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), var(--glass));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding:20px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      backdrop-filter: blur(6px) saturate(120%);
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:14px;
+    }
+    .logo{
+      width:52px;
+      height:52px;
+      border-radius:10px;
+      background: linear-gradient(135deg,var(--accent1),var(--accent2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      box-shadow: 0 6px 18px rgba(124,92,255,0.12);
+      font-family: var(--mono);
+      font-size:18px;
+      color:white;
+    }
+    .brand h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:0.2px;
+    }
+    .brand p{margin:0;font-size:13px;color:var(--muted)}
+
+    .status{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:18px;
+    }
+    .chip{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--glass-border);
+      padding:10px 12px;
+      border-radius:12px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .chip .label{font-size:13px;color:var(--muted)}
+    .chip .value{font-weight:700;font-size:16px}
+
+    /* Controls */
+    .controls{
+      margin-bottom:18px;
+    }
+    .controls label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+    .controls .range-wrap{display:flex;gap:10px;align-items:center}
+    input[type="range"]{
+      width:100%;
+      accent-color:var(--accent1);
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      background:linear-gradient(90deg,var(--accent1),var(--accent2));
+      border:none;
+      color:white;
+      padding:12px 16px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 10px 30px rgba(124,92,255,0.14);
+      transition:transform .14s ease, box-shadow .14s ease, opacity .12s;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{
+      background:transparent;
+      border:1px solid var(--glass-border);
+      color:var(--muted);
+      box-shadow:none;
+      font-weight:600;
+    }
+
+    /* Right: game board */
+    .board{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: var(--radius);
+      padding:28px;
+      border:1px solid var(--glass-border);
+      box-shadow: 0 12px 40px rgba(2,6,23,0.55);
+      min-height:420px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .board-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .game-title{font-size:18px;font-weight:700}
+    .desc{color:var(--muted);font-size:13px}
+
+    /* Dice area */
+    .dice-area{
+      display:flex;
+      gap:18px;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+      border-radius:12px;
+      border:1px dashed rgba(255,255,255,0.03);
+    }
+    .dice{
+      width:90px;height:90px;border-radius:12px;background:linear-gradient(180deg,#0f2130,#08121a);display:flex;align-items:center;justify-content:center;position:relative;box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+      transform-style:preserve-3d; perspective:600px;
+    }
+    .pips{font-size:26px;font-weight:700;opacity:0.95}
+
+    /* Rolling animation */
+    .dice.rolling{animation:shake 900ms cubic-bezier(.15,.9,.3,1) infinite}
+    @keyframes shake{
+      0%{transform:translate3d(0,0,0) rotate(0deg)}
+      20%{transform:translate3d(6px,-6px,0) rotate(12deg)}
+      40%{transform:translate3d(-6px,6px,0) rotate(-8deg)}
+      60%{transform:translate3d(6px,6px,0) rotate(6deg)}
+      80%{transform:translate3d(-6px,-6px,0) rotate(-6deg)}
+      100%{transform:translate3d(0,0,0) rotate(0deg)}
+    }
+
+    /* Result badge */
+    .result{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      font-size:20px;
+      padding:10px 16px;
+      border-radius:999px;
+    }
+    .result.tai{background:linear-gradient(90deg, rgba(124,92,255,0.12), rgba(0,212,255,0.06)); color:var(--accent2)}
+    .result.xiu{background:linear-gradient(90deg, rgba(255,92,124,0.06), rgba(124,92,255,0.02)); color:var(--danger)}
+
+    /* History list */
+    .history{
+      margin-top:8px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      max-height:220px;
+      overflow:auto;
+      padding-right:6px;
+    }
+    .hist-item{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:space-between;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+      padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);
+      font-size:13px;color:var(--muted);
+    }
+    .small-pill{font-weight:700;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);color:var(--muted);font-size:12px}
+
+    /* Footer / stats */
+    .stats{display:flex;gap:12px;align-items:center}
+    .stat{display:flex;flex-direction:column;gap:6px}
+    .stat .num{font-weight:800;font-size:18px}
+    .muted{color:var(--muted);font-size:13px}
+
+    /* Responsive */
+    @media (max-width:980px){
+      .container{grid-template-columns: 1fr; padding:12px}
+      .board{order:2}
+    }
+  </style>
+</head>
+<body>
+  <main class="container" role="main" aria-label="Mini game simulator">
+    <!-- Left: controls -->
+    <aside class="panel" aria-labelledby="controls-heading">
+      <div class="brand" aria-hidden="false">
+        <div class="logo" aria-hidden="true">Twuyn</div>
+        <div>
+          <h1>TRANG WEB CÁ CƯỢC CỜ BẠC TWUYNSOLIST
+            UY TÍN SỐ 1 AN NHƠN
+          </h1>
+          <p>CỜ BẠC - NGƯỜI KHÔNG CHƠI LÀ NGƯỜI THẮNG - NGƯỜI CHƠI LÀ THUA</p>
+        </div>
+      </div>
+
+      <div class="status" aria-hidden="false">
+        <div class="chip" title="Mode">
+          <div class="label">Chế độ</div>
+          <div class="value" id="modeLabel"></div>
+        </div>
+        <div class="chip" title="Rounds">
+          <div class="label">Lượt chơi</div>
+          <div class="value" id="roundCount">0</div>
+        </div>
+      </div>
+
+      <section class="controls" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" style="margin:0 0 10px 0;font-size:15px">Tùy chỉnh (phi tiền)</h2>
+
+        <label for="speedRange">Tốc độ hiệu ứng (ms)</label>
+        <div class="range-wrap">
+          <input id="speedRange" type="range" min="300" max="1600" value="900" />
+          <div style="min-width:56px;text-align:right;color:var(--muted);font-weight:700" id="speedValue">900</div>
+        </div>
+
+        <label for="diceCount">Số xúc xắc</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn secondary" data-dice="1">1</button>
+          <button class="btn secondary" data-dice="2">2</button>
+          <button class="btn" id="dice3btn" data-dice="3" style="background:linear-gradient(90deg,var(--accent2),var(--accent1));">3</button>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="rollBtn" class="btn" aria-label="Ném xúc xắc">Ném xúc xắc</button>
+          <button id="autoBtn" class="btn secondary">Tự động (10 lượt)</button>
+          <button id="clearBtn" class="btn secondary" title="Xóa lịch sử">Xóa lịch sử</button>
+        </div>
+      </section>
+
+      <section aria-labelledby="history-heading" style="margin-top:18px">
+        <h3 id="history-heading" style="margin:0 0 10px 0;font-size:15px">Lịch sử (mới nhất trên cùng)</h3>
+        <div class="history" id="historyList" aria-live="polite" aria-atomic="true">
+          <!-- history items injected here -->
+        </div>
+      </section>
+    </aside>
+
+    <!-- Right: board -->
+    <section class="board" aria-labelledby="game-heading">
+      <div class="board-top">
+        <div>
+          <div class="game-title" id="game-heading">Xúc xắc </div>
+          <div class="desc">Ném 1–3 xúc xắc, xem tổng và phân loại ( Dùng tiền thật).</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Kết quả gần nhất</div>
+          <div id="lastBadge" class="result" style="min-width:120px;justify-content:center">—</div>
+        </div>
+      </div>
+
+      <div class="dice-area" aria-live="polite" aria-atomic="true" id="diceArea">
+        <!-- Dice elements injected here -->
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="muted">Kết quả</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="small-pill" id="sumDisplay">Tổng: —</div>
+            <div class="small-pill" id="detailDisplay">Chi tiết: —</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="stats">
+            <div class="stat">
+              <div class="muted">Tỷ lệ Tài</div>
+              <div class="num" id="ratioTai">0%</div>
+            </div>
+            <div class="stat">
+              <div class="muted">Tỷ lệ Xỉu</div>
+              <div class="num" id="ratioXiu">0%</div>
+            </div>
+          </div>
+          <div style="min-width:160px;text-align:right">
+            <button id="explainBtn" class="btn secondary" title="Giải thích luật & thông tin">Thông tin</button>
+          </div>
+        </div>
+      </div>
+
+      <footer style="margin-top:auto;display:flex;justify-content:space-between;align-items:center">
+        <div class="muted">Phiên bản demo • Thiết kế hiện đại • Dùng tiền thật</div>
+        <div class="muted">Made with ♥ — UI demo</div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    /****************************************************************
+     * Mini Game Simulator — Vanilla JS
+     * - Purpose: interactive dice simulator for demo/learning only.
+     * - No betting, no money, no gambling operations.
+     * - Features: 1-3 dice, animated roll, history, auto-run.
+     ****************************************************************/
+
+    // DOM refs
+    const diceArea = document.getElementById('diceArea');
+    const rollBtn = document.getElementById('rollBtn');
+    const speedRange = document.getElementById('speedRange');
+    const speedValue = document.getElementById('speedValue');
+    const historyList = document.getElementById('historyList');
+    const roundCount = document.getElementById('roundCount');
+    const lastBadge = document.getElementById('lastBadge');
+    const sumDisplay = document.getElementById('sumDisplay');
+    const detailDisplay = document.getElementById('detailDisplay');
+    const ratioTai = document.getElementById('ratioTai');
+    const ratioXiu = document.getElementById('ratioXiu');
+    const autoBtn = document.getElementById('autoBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const explainBtn = document.getElementById('explainBtn');
+    const diceButtons = document.querySelectorAll('[data-dice]');
+
+    // State
+    let diceCount = 3;
+    let rounds = 0;
+    let history = []; // most recent first
+    let rollDuration = parseInt(speedRange.value, 10);
+
+    // Accessibility: announce messages
+    function announce(message) {
+      // Use ARIA live region by pushing a visually-hidden element? Here we add to historyList for screen readers
+      const sr = document.createElement('div');
+      sr.style.position = 'absolute';
+      sr.style.width = '1px';
+      sr.style.height = '1px';
+      sr.style.overflow = 'hidden';
+      sr.style.clip = 'rect(1px, 1px, 1px, 1px)';
+      sr.style.whiteSpace = 'nowrap';
+      sr.innerText = message;
+      document.body.appendChild(sr);
+      setTimeout(()=>document.body.removeChild(sr), 1000);
+    }
+
+    // Helpers
+    function randomDie() { return Math.floor(Math.random()*6)+1; }
+    function classify(total, count){
+      // For demo: classify Tài/Xỉu only when 3 dice. For other counts, classify as "Large/Small" using similar rule.
+      const max = count * 6;
+      const min = count * 1;
+      const mid = Math.floor((max+min)/2);
+      return total > mid ? 'Tài' : 'Xỉu';
+    }
+
+    // Render dice elements according to diceCount
+    function renderDiceElements() {
+      diceArea.innerHTML = '';
+      for (let i=0;i<diceCount;i++){
+        const d = document.createElement('div');
+        d.className = 'dice';
+        d.setAttribute('role','img');
+        d.setAttribute('aria-label',`Xúc xắc ${i+1} - chưa ném`);
+        d.innerHTML = '<div class="pips">-</div>';
+        diceArea.appendChild(d);
+      }
+    }
+
+    // Update stats from history
+    function updateStats(){
+      const total = history.length;
+      if (total === 0) {
+        ratioTai.textContent = '0%';
+        ratioXiu.textContent = '0%';
+        return;
+      }
+      const tai = history.filter(h=>h.result === 'Tài').length;
+      const xiu = history.filter(h=>h.result === 'Xỉu').length;
+      ratioTai.textContent = Math.round((tai/total)*100) + '%';
+      ratioXiu.textContent = Math.round((xiu/total)*100) + '%';
+    }
+
+    // Add history item (most recent at top)
+    function pushHistory(item){
+      history.unshift(item);
+      if (history.length>200) history.pop();
+      roundCount.textContent = history.length;
+      renderHistory();
+      updateStats();
+    }
+
+    function renderHistory(){
+      historyList.innerHTML = '';
+      for (const h of history){
+        const el = document.createElement('div');
+        el.className = 'hist-item';
+        el.innerHTML = `
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="font-weight:700;color:var(--muted);min-width:38px">${h.round}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              ${h.dice.map(v=>`<div class="small-pill">${v}</div>`).join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="small-pill">${h.total}</div>
+            <div style="min-width:60px;text-align:right" class="${h.result === 'Tài' ? 'result tai' : 'result xiu'}">${h.result}</div>
+          </div>
+        `;
+        historyList.appendChild(el);
+      }
+    }
+
+    // Animate and roll dice
+    async function rollDiceAnimation(){
+      const diceElems = Array.from(diceArea.querySelectorAll('.dice'));
+      if (diceElems.length === 0) return;
+
+      // Start rolling visual
+      diceElems.forEach(d=>d.classList.add('rolling'));
+      rollBtn.disabled = true;
+      autoBtn.disabled = true;
+      diceButtons.forEach(b=>b.disabled=true);
+
+      const start = performance.now();
+      // simple visual interval to change pip numbers while "rolling"
+      const interim = [];
+      diceElems.forEach((d, idx) => {
+        interim[idx] = setInterval(() => {
+          const random = Math.floor(Math.random()*6)+1;
+          d.querySelector('.pips').textContent = random;
+          d.setAttribute('aria-label',`Xúc xắc ${idx+1} - giá trị ${random} (đang ném)`);
+        }, 80);
+      });
+
+      await new Promise(r => setTimeout(r, rollDuration));
+
+      // stop interim intervals and set final numbers
+      interim.forEach(i=>clearInterval(i));
+      const final = diceElems.map(() => randomDie());
+      diceElems.forEach((d, idx) => {
+        d.querySelector('.pips').textContent = final[idx];
+        d.setAttribute('aria-label',`Xúc xắc ${idx+1} - giá trị ${final[idx]}`);
+        d.classList.remove('rolling');
+      });
+
+      rollBtn.disabled = false;
+      autoBtn.disabled = false;
+      diceButtons.forEach(b=>b.disabled=false);
+
+      // compute and display result
+      const total = final.reduce((a,b)=>a+b,0);
+      const result = classify(total, final.length);
+      rounds++;
+      pushHistory({round: rounds, dice: final, total, result});
+      sumDisplay.textContent = 'Tổng: ' + total;
+      detailDisplay.textContent = 'Chi tiết: ' + final.join(', ');
+      lastBadge.textContent = result;
+      lastBadge.className = 'result ' + (result === 'Tài' ? 'tai' : 'xiu');
+      announce(`Lượt ${rounds}: ${final.join(', ')} — Tổng ${total} — ${result}`);
+    }
+
+    // UI events
+    speedRange.addEventListener('input', (e)=>{
+      rollDuration = parseInt(e.target.value,10);
+      speedValue.textContent = rollDuration;
+    });
+
+    rollBtn.addEventListener('click', rollDiceAnimation);
+
+    autoBtn.addEventListener('click', async ()=>{
+      autoBtn.disabled = true;
+      rollBtn.disabled = true;
+      const times = 10;
+      for (let i=0;i<times;i++){
+        await rollDiceAnimation();
+        await new Promise(r=>setTimeout(r, 350));
+      }
+      autoBtn.disabled = false;
+      rollBtn.disabled = false;
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      history = [];
+      rounds = 0;
+      renderHistory();
+      roundCount.textContent = '0';
+      sumDisplay.textContent = 'Tổng: —';
+      detailDisplay.textContent = 'Chi tiết: —';
+      lastBadge.textContent = '—';
+      lastBadge.className = 'result';
+      updateStats();
+      announce('Lịch sử đã được xóa');
+    });
+
+    explainBtn.addEventListener('click', ()=>{
+      alert(`Thông tin:\n\n- Đây là bản demo mô phỏng ném xúc xắc.\n- Bạn có thể chọn 1–3 xúc xắc và nhấn "Ném xúc xắc".\n- Kết quả được hiển thị và lưu vào lịch sử.\n\nLƯU Ý: Đây là bản chơi giải trí/giáo dục — không có chức năng đặt cược, tiền thật, hay giao dịch.`);
+    });
+
+    diceButtons.forEach(btn=>{
+      btn.addEventListener('click',(e)=>{
+        const v = parseInt(e.currentTarget.dataset.dice,10);
+        diceCount = v;
+        // update active style
+        diceButtons.forEach(b=>b.classList.remove('active'));
+        // visually set active
+        diceButtons.forEach(b=>{
+          if (parseInt(b.dataset.dice,10) === v) {
+            b.classList.remove('secondary');
+            b.classList.add('btn');
+            b.style.background = 'linear-gradient(90deg,var(--accent2),var(--accent1))';
+            b.style.color = '#fff';
+          } else {
+            b.classList.remove('btn');
+            b.classList.add('btn','secondary');
+            b.style.background = '';
+            b.style.color = '';
+          }
+        });
+        renderDiceElements();
+      });
+    });
+
+    // Init
+    renderDiceElements();
+    updateStats();
+
+    // keyboard: space -> roll
+    window.addEventListener('keydown', (e)=>{
+      if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        rollBtn.click();
+      }
+    });
+
+    // small enhancement: remember last dice count in session storage
+    try {
+      const saved = sessionStorage.getItem('mg_diceCount');
+      if (saved) {
+        diceCount = parseInt(saved,10) || 3;
+      }
+    } catch(e){/* ignore */}
+    renderDiceElements();
+
+    // persist when change dice count
+    diceArea.addEventListener('click', ()=> {
+      try { sessionStorage.setItem('mg_diceCount', diceCount); } catch(e){}
+    });
+  </script>
+</body>
+</html>
